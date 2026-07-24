@@ -1,108 +1,418 @@
 # Full-Scan Insertion and Stuck-at ATPG on ISCAS'89 Benchmarks
 
-Design-for-Test (DFT) project: converting sequential gate-level netlists into
-scan-testable designs, generating stuck-at ATPG patterns, and measuring fault
-coverage on standard ISCAS'89 benchmark circuits.
+A Design-for-Test learning project that converts sequential ISCAS'89 benchmark
+circuits into scan-testable designs, generates stuck-at test patterns, performs
+fault simulation, and independently verifies the generated scan structures.
+
+## Project Scope
+
+This repository focuses on:
+
+- standard-cell mapping of sequential benchmark circuits;
+- sequential-netlist cutting for combinational ATPG;
+- single stuck-at fault simulation and test-pattern generation;
+- scan-chain insertion and stitching;
+- independent scan-chain verification using self-checking testbenches;
+- reproducible result collection and analysis.
+
+Fault provides the underlying synthesis integration, netlist cutting,
+test-pattern generation, fault simulation, pattern compaction, and scan-chain
+stitching.
+
+The original work in this repository includes:
+
+- flow automation;
+- custom scan verification;
+- debugging and patching of generated wrappers;
+- golden-model development for functional capture checking;
+- result organization and technical analysis.
 
 ## Toolchain
 
-- **Yosys 0.33** — logic synthesis to a standard cell library
-- **[Fault](https://github.com/AUCOHL/Fault)** (`fault-dft` on PyPI) — netlist
-  cutting, stuck-at ATPG + fault simulation, scan-chain stitching
-- **Icarus Verilog** — gate-level simulation / testbench verification
-- **Standard cell library**: `osu035` (350nm, bundled with Fault) — Liberty +
-  Verilog cell models
+- **Yosys** — logic synthesis and standard-cell mapping
+- **Fault (`fault-dft`)** — sequential-netlist cutting, stuck-at ATPG,
+  fault simulation, test-pattern compaction, and scan-chain stitching
+- **Icarus Verilog** — gate-level simulation and self-checking verification
+- **OSU035 standard-cell library** — Liberty data and Verilog functional models
+- **Python 3** — generated-wrapper patching and testbench generation
 
-## Flow
+## DFT Flow
 
-```
-ISCAS'89 gate-level RTL (behavioral DFF)
-        |  fault synth  (Yosys, map to osu035 stdcells)
+```text
+ISCAS'89 sequential gate-level Verilog
+        |
+        | fault synth
         v
-Synthesized flattened netlist (real DFFSR/DFFPOSX1 cells)
-        |  fault cut  (remove FFs -> pure combinational, expose as ports)
-        v
-Combinational netlist  ---->  fault atpg  ---->  stuck-at fault coverage,
-                                                  compacted test vectors
-        |  fault chain (on the pre-cut synthesized netlist)
-        v
-Scan-inserted netlist (internal scan chain + boundary scan register)
-        |  Icarus Verilog testbench
-        v
-shift-in -> capture -> shift-out verification
+Technology-mapped sequential netlist
+        |
+        +----------------------------------+
+        |                                  |
+        | fault cut                        | fault chain
+        v                                  v
+Combinational cut netlist          Scan-inserted netlist
+        |                                  |
+        | fault atpg                       | custom Icarus regressions
+        v                                  v
+Stuck-at test patterns,             s27: shift-capture-shift
+fault simulation,                   s298/s344: serial shift integrity
+and coverage reports
 ```
 
-Full commands: [`scripts/run_pipeline.sh`](scripts/run_pipeline.sh).
+The original end-to-end flow commands are provided in:
 
-## Circuits
-
-Netlists sourced directly from `AUCOHL/Fault`'s bundled ISCAS'89 set
-(`Benchmarks/ISCAS_89/*.v`), which are already gate-level Verilog (no manual
-`.bench` parsing needed).
-
-## Results
-
-| Circuit | FF count | Fault sites | Coverage (PRNG ATPG) | Compacted patterns | Scan chain (internal / boundary / total) |
-|---|---|---|---|---|---|
-| s27  | 3  | —   | 86.67% (hit vector ceiling of 200) | 6  | 3 / 5 / 8 |
-| s298 | 14 | 244 (61 gates, 40 ports) | 99.18% | 11 | 14 / 9 / 23 |
-| s344 | 15 | 346 (91 gates, 53 ports) | 98.84% | 12 | 15 / 20 / 35 |
-
-Raw tool output backing these numbers is kept per-circuit under `results/<circuit>/`.
-
-**Note on s27's coverage:** s27 is small enough that the PRNG-based ATPG hit
-the vector ceiling (200) before reaching the 95% target set in
-`run_pipeline.sh`; 86.67% is the actual measured coverage at that ceiling, not
-a target. Raising the ceiling or switching the generator to Atalanta/Quaigh
-(`fault atpg -g Atalanta ...`) would push this higher — left as a documented
-follow-up rather than tuned to look better.
-
-## Scan-chain verification (shift-in / capture / shift-out)
-
-For **s27**, Fault's own auto-generated Icarus Verilog testbench
-(`results/s27/s27_scan_tb.sv`) shifts a known bit pattern through the chain,
-captures, and shifts it back out. Simulation log
-(`results/s27/s27_scan_tb_sim.log`):
-
-```
-Success: expected 00010101 got 00010101
+```text
+scripts/run_pipeline.sh
 ```
 
-**For s298 / s344**: these circuits have no top-level reset port in the
-original ISCAS'89 netlist. Fault's internal auto-verification step assumes a
-reset signal exists and fails during testbench elaboration (signal name
-mismatch — a real limitation encountered while running the tool, not a bug
-in this repo's scripts; worked around with `--skip-synth`). The scan-chain
-netlist itself (`results/s298/s298_postscan.v`, `results/s344/s344_postscan.v`)
-is still correctly generated, including the scan-cell order embedded as JSON
-metadata in the file header. Writing a standalone testbench for the no-reset
-case is the next step (see below).
+## Benchmark Circuits
 
-## Area overhead
+The current project evaluates three circuits from the ISCAS'89 sequential
+benchmark set:
 
-Pre-scan cell counts are visible in the Yosys synthesis logs
-(`fault synth` stdout, captured when running `scripts/run_pipeline.sh`).
-Post-scan area comparison (via `report_design_area` equivalent through Yosys
-`stat`) is a planned addition once the no-reset scan-chain testbench issue
-above is resolved.
+- `s27`
+- `s298`
+- `s344`
 
-## Repo structure
+The benchmark files were obtained from the collection distributed with the
+Fault project.
 
+## ATPG Results
+
+| Circuit | Internal FFs | Enumerated fault sites | Measured fault coverage | Compacted patterns |
+|---|---:|---:|---:|---:|
+| `s27` | 3 | Not yet summarized | 86.67% | 6 |
+| `s298` | 14 | 244 | 99.18% | 11 |
+| `s344` | 15 | 346 | 98.84% | 12 |
+
+The values above are measured results produced by the configured Fault
+PRNG-based test-pattern generation flow.
+
+Raw ATPG reports are stored under:
+
+```text
+results/<circuit>/
 ```
-benchmarks/        original ISCAS'89 gate-level Verilog (from AUCOHL/Fault)
-tech/osu035/       standard cell library (Liberty + Verilog models)
-netlists/          intermediate synth/cut/chain outputs
-results/<circuit>/ pre-scan netlist, cut netlist, ATPG report (JSON),
-                    post-scan netlist, testbench + sim log (where available)
-scripts/           run_pipeline.sh - exact reproducible commands
+
+## Fault-Coverage Interpretation
+
+The reported coverage values are results from the current PRNG-based ATPG
+configuration. They are not manually selected target values.
+
+For `s27`, the generator reached the configured vector ceiling before reaching
+the requested target coverage.
+
+Increasing the vector ceiling or switching to another ATPG backend may improve
+the measured coverage. The remaining faults have not yet been independently
+classified as detectable, redundant, or untestable.
+
+This project does not claim that PRNG pattern generation is equivalent to a
+deterministic commercial ATPG flow.
+
+## Scan Architecture
+
+The generated scan structures contain:
+
+- tool-generated input boundary registers;
+- internal scan flip-flops;
+- tool-generated output boundary registers;
+- serial scan input and output ports;
+- scan shift control.
+
+| Circuit | Input boundary registers | Internal scan FFs | Output boundary registers | Total scan length |
+|---|---:|---:|---:|---:|
+| `s27` | 4 | 3 | 1 | 8 |
+| `s298` | 3 | 14 | 6 | 23 |
+| `s344` | 9 | 15 | 11 | 35 |
+
+## Independent Scan Verification
+
+Independent self-checking regressions are provided in addition to the
+testbenches generated by Fault.
+
+### s27: True Shift-Capture-Shift Verification
+
+The custom testbench:
+
+```text
+verification/s27_scan_capture_tb.sv
 ```
 
-## Known limitations / next steps
+performs three distinct phases:
 
-- s298 / s344 scan-chain testbench verification not yet automated (see above).
-- s5378 not yet run (larger circuit, planned).
-- ATPG uses Fault's internal PRNG generator; Atalanta/Quaigh backend not yet
-  compared (would give a second, algorithmically different coverage number
-  for cross-checking).
-- Area overhead (pre vs. post scan, single vs. multiple scan chains) not yet
-  tabulated.
+1. Shift a known serial stream into the complete scan chain.
+2. Deassert `shift` and apply one functional capture pulse.
+3. Re-enable shifting and unload the captured response.
+
+The expected captured response is calculated independently by:
+
+```text
+verification/s27_golden_comb.sv
+```
+
+The regression checks that:
+
+- the unloaded response matches the golden combinational model;
+- the captured response differs from the original shift-in stream;
+- all three phases complete without simulation failure.
+
+Result log:
+
+```text
+results/s27/s27_scan_capture.log
+```
+
+Expected final status:
+
+```text
+SHIFT-CAPTURE-SHIFT PASS
+```
+
+### s298 and s344: Serial Scan-Chain Integrity
+
+The Fault-generated intermediate wrappers for `s298` and `s344` declare a
+reset input internally but omit it from the top-level module port list.
+
+The script:
+
+```text
+scripts/generate_scan_shift_test.py
+```
+
+creates patched build copies and self-checking testbenches without modifying
+the original generated netlists.
+
+The generated tests:
+
+1. create a deterministic non-trivial serial pattern;
+2. shift the pattern through the complete scan chain;
+3. unload the chain;
+4. compare the observed stream against the expected stream.
+
+Result logs:
+
+```text
+results/s298/s298_scan_shift.log
+results/s344/s344_scan_shift.log
+```
+
+Both regressions report:
+
+```text
+SCAN SHIFT PASS
+```
+
+These two tests verify serial scan-chain connectivity and shift operation.
+They do not currently claim independent functional-capture verification for
+`s298` or `s344`.
+
+## Verification Status
+
+| Check | s27 | s298 | s344 |
+|---|---|---|---|
+| Technology mapping | Completed | Completed | Completed |
+| Sequential-netlist cutting | Completed | Completed | Completed |
+| Stuck-at ATPG | Completed | Completed | Completed |
+| Fault simulation | Completed | Completed | Completed |
+| Scan-chain insertion | Completed | Completed | Completed |
+| Serial scan integrity | Pass | Pass | Pass |
+| Independent functional capture | Pass | Not yet implemented | Not yet implemented |
+| Formal equivalence | Not performed | Not performed | Not performed |
+
+## Boundary-Register Terminology
+
+The input/output boundary registers generated by `fault chain` are part of
+the tool-generated scan-test structure.
+
+This project does **not** implement an IEEE 1149.1 JTAG Test Access Port
+controller.
+
+Fault provides JTAG/TAP insertion through the separate `fault tap` stage,
+which is outside the current project scope.
+
+## Repository Structure
+
+```text
+benchmarks/
+    Original ISCAS'89 sequential benchmark circuits
+
+tech/osu035/
+    Liberty file and Verilog standard-cell models
+
+netlists/
+    Synthesized, cut, and scan-chain intermediate artifacts
+
+verification/
+    Independent golden model and self-checking s27 scan-capture testbench
+
+scripts/
+    DFT pipeline and scan-test generator
+
+results/s27/
+    ATPG report, pre-scan/post-scan artifacts, scan testbench artifacts,
+    and true shift-capture-shift verification log
+
+results/s298/
+    ATPG report, pre-scan/post-scan artifacts, and scan-integrity log
+
+results/s344/
+    ATPG report, pre-scan/post-scan artifacts, and scan-integrity log
+
+build/
+    Locally generated patched netlists, generated testbenches,
+    and simulation binaries; intentionally ignored by Git
+```
+
+## Reproducing the Scan Tests
+
+### s27
+
+Compile:
+
+```bash
+mkdir -p build/s27 results/s27
+
+iverilog -g2012 \
+  -s tb_s27_scan_capture \
+  -o build/s27/s27_scan_capture.vvp \
+  tech/osu035/osu035_stdcells.v \
+  netlists/s27.chained.v \
+  verification/s27_golden_comb.sv \
+  verification/s27_scan_capture_tb.sv
+```
+
+Run:
+
+```bash
+vvp build/s27/s27_scan_capture.vvp \
+  | tee results/s27/s27_scan_capture.log
+```
+
+Expected result:
+
+```text
+SHIFT-CAPTURE-SHIFT PASS
+```
+
+### s298
+
+Generate a patched build copy and testbench:
+
+```bash
+mkdir -p build/s298 results/s298
+
+python3 scripts/generate_scan_shift_test.py \
+  --circuit s298 \
+  --netlist netlists/s298.chain-intermediate.v \
+  --outdir build/s298
+```
+
+Compile:
+
+```bash
+iverilog -g2012 \
+  -s tb_s298_scan_shift \
+  -o build/s298/s298_scan_shift.vvp \
+  tech/osu035/osu035_stdcells.v \
+  build/s298/s298_postscan_patched.v \
+  build/s298/s298_scan_shift_tb.sv
+```
+
+Run:
+
+```bash
+vvp build/s298/s298_scan_shift.vvp \
+  | tee results/s298/s298_scan_shift.log
+```
+
+Expected result:
+
+```text
+SCAN SHIFT PASS
+```
+
+### s344
+
+Generate a patched build copy and testbench:
+
+```bash
+mkdir -p build/s344 results/s344
+
+python3 scripts/generate_scan_shift_test.py \
+  --circuit s344 \
+  --netlist netlists/s344.chain-intermediate.v \
+  --outdir build/s344
+```
+
+Compile:
+
+```bash
+iverilog -g2012 \
+  -s tb_s344_scan_shift \
+  -o build/s344/s344_scan_shift.vvp \
+  tech/osu035/osu035_stdcells.v \
+  build/s344/s344_postscan_patched.v \
+  build/s344/s344_scan_shift_tb.sv
+```
+
+Run:
+
+```bash
+vvp build/s344/s344_scan_shift.vvp \
+  | tee results/s344/s344_scan_shift.log
+```
+
+Expected result:
+
+```text
+SCAN SHIFT PASS
+```
+
+## Generated-Artifact Policy
+
+Files under `netlists/` and parts of `results/` may be generated by Fault or
+Yosys.
+
+Custom verification files and scripts are kept separately so that original
+tool-generated artifacts remain distinguishable from project-authored code.
+
+Patched copies of generated wrappers are created only under `build/`, leaving
+the original generated netlists unchanged.
+
+## Current Limitations
+
+- Independent functional shift-capture-shift verification is currently
+  implemented only for `s27`.
+- `s298` and `s344` have passing serial scan-integrity regressions but no
+  independent golden functional-capture model.
+- Remaining undetected faults have not been classified as detectable,
+  redundant, or untestable.
+- ATPG currently uses Fault's PRNG generator; another ATPG backend has not yet
+  been compared.
+- Pre-scan versus post-scan cell-count and mapped-area overhead have not yet
+  been tabulated.
+- Functional equivalence between pre-scan and post-scan designs has not yet
+  been checked independently.
+- No IEEE 1149.1 JTAG TAP implementation is included.
+- No formal equivalence or silicon sign-off flow is claimed.
+
+## Planned Extensions
+
+- Generate a transparent ATPG summary with total, detected, and undetected
+  fault counts.
+- Compare pre-scan and post-scan cell count and mapped-area estimates.
+- Add simulation-based functional-mode regression between pre-scan and
+  post-scan netlists.
+- Compare PRNG-based generation against another ATPG backend.
+- Pin tool versions and add an automated regression workflow.
+- Add third-party attribution and licensing notices.
+
+## Project Ownership
+
+Fault provides the underlying synthesis integration, sequential-netlist
+cutting, fault simulation, test-pattern generation, compaction, and
+scan-chain stitching.
+
+This repository focuses on constructing a reproducible DFT flow around those
+tools, independently validating generated scan structures, debugging wrapper
+generation issues, analyzing ATPG results, and documenting technical
+limitations honestly.

@@ -3,3 +3,8 @@
 __pycache__/
 build/
 *.vvp
+.venv/
+*.pyc
+parser.out
+parsetab.py
+*+attrs
