@@ -352,8 +352,7 @@ ignored build directory and fully technology-mapped before measurement.
 The summaries are generated from Yosys analysis logs by:
 
 ```bash
-python3 scripts/summarize_area.py
-```
+bash scripts/run_area_analysis.sh```
 
 Generated result files:
 
