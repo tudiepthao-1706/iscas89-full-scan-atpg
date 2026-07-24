@@ -1,0 +1,16 @@
+VCD info: dumpfile results/s27/s27_scan_capture.vcd opened for output.
+========================================
+PHASE 1: SHIFT-IN
+Input serial stream : 10100110
+Loaded chain state  : 01100101
+========================================
+PHASE 2: CAPTURE
+Expected captured chain: 11000101
+========================================
+PHASE 3: SHIFT-OUT
+Expected serial response: 10100011
+Observed serial response: 10100011
+========================================
+SHIFT-CAPTURE-SHIFT PASS
+========================================
+verification/s27_scan_capture_tb.sv:248: $finish called at 118000 (1ps)
