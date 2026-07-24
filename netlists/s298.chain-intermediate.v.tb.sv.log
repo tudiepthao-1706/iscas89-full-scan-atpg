@@ -1,0 +1,11 @@
+$ '/usr/bin/iverilog'   -Ttyp -o netlists/s298.chain-intermediate.v.tb.sv.a.out netlists/s298.chain-intermediate.v.tb.sv 2>&1
+netlists/s298.chain-intermediate.v.tb.sv:27: error: port ``reset'' is not a port of uut.
+netlists/s298.chain-intermediate.v.tb.sv:27: error: port ``din'' is not a port of uut.
+netlists/s298.chain-intermediate.v.tb.sv:27: error: port ``dout'' is not a port of uut.
+netlists/s298.chain-intermediate.v.tb.sv:27: error: port ``testing'' is not a port of uut.
+netlists/s298.chain-intermediate.v.tb.sv:27: error: port ``clock'' is not a port of uut.
+netlists/s298.chain-intermediate.v.tb.sv:24: error: Could not find variable ``CK'' in ``testbench''
+netlists/s298.chain-intermediate.v.tb.sv:25: error: Could not find variable ``tck'' in ``testbench''
+netlists/s298.chain-intermediate.v.tb.sv:48: error: Could not find variable ``rst'' in ``testbench''
+netlists/s298.chain-intermediate.v.tb.sv:50: error: Could not find variable ``test'' in ``testbench''
+9 error(s) during elaboration.

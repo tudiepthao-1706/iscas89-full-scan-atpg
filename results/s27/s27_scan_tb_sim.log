@@ -1,0 +1,5 @@
+$ '/usr/bin/iverilog'   -Ttyp -o netlists/s27.chained.v.tb.sv.a.out netlists/s27.chained.v.tb.sv 2>&1
+$ 'vvp' netlists/s27.chained.v.tb.sv.a.out
+Success: expected 00010101 got 00010101
+SUCCESS_STRING
+netlists/s27.chained.v.tb.sv:77: $finish called at 8400 (10ps)
