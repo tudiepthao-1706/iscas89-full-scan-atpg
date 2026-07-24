@@ -1,0 +1,4 @@
+circuit,prescan_cells,postscan_cells,cell_increase,cell_overhead_percent,prescan_area,postscan_area,area_increase,area_overhead_percent
+s27,15,56,41,273.33,3264.00,10140.00,6876.00,210.66
+s298,75,162,87,116.00,12284.00,25652.00,13368.00,108.82
+s344,106,263,157,148.11,15320.00,41480.00,26160.00,170.76
