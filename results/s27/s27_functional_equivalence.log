@@ -1,0 +1,6 @@
+VCD info: dumpfile results/s27/s27_functional_equivalence.vcd opened for output.
+========================================
+FUNCTIONAL REGRESSION PASS: 1000 cycles
+Pre-scan and post-scan outputs matched in functional mode.
+========================================
+verification/s27_functional_equivalence_tb.sv:158: $finish called at 10010000 (1ps)

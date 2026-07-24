@@ -204,6 +204,49 @@ SCAN SHIFT PASS
 These two tests verify serial scan-chain connectivity and shift operation.
 They do not currently claim independent functional-capture verification for
 `s298` or `s344`.
+## s27 Functional-Mode Regression
+
+A simulation-based functional regression compares the technology-mapped
+pre-scan design against the scan-inserted design while the latter is held in
+functional mode.
+
+The self-checking testbench is:
+
+```text
+verification/s27_functional_equivalence_tb.sv
+```
+
+The complete regression can be reproduced with:
+
+```bash
+bash scripts/run_s27_functional_regression.sh
+```
+
+The runner:
+
+1. creates a build-only copy of the pre-scan netlist whose top module is
+   renamed to `s27_prescan`;
+2. compiles the pre-scan and post-scan designs into the same simulation;
+3. forces the post-scan design into functional mode with `test=0` and
+   `shift=0`;
+4. applies the same deterministic pseudo-random input sequence to both
+   designs;
+5. compares their output before and after each functional clock pulse for
+   1,000 cycles.
+
+The recorded result is:
+
+```text
+results/s27/s27_functional_equivalence.log
+```
+
+Expected final status:
+
+```text
+FUNCTIONAL REGRESSION PASS: 1000 cycles
+```
+
+This is a simulation-based regression, not a formal equivalence proof.
 
 ## Verification Status
 
@@ -214,6 +257,7 @@ They do not currently claim independent functional-capture verification for
 | Stuck-at ATPG | Completed | Completed | Completed |
 | Fault simulation | Completed | Completed | Completed |
 | Scan-chain insertion | Completed | Completed | Completed |
+| Simulation-based functional regression | Pass | Not yet implemented | Not yet implemented |
 | Serial scan integrity | Pass | Pass | Pass |
 | Independent functional capture | Pass | Not yet implemented | Not yet implemented |
 | Formal equivalence | Not performed | Not performed | Not performed |
