@@ -1,0 +1,9 @@
+VCD info: dumpfile results/s298/s298_scan_shift.vcd opened for output.
+========================================
+Circuit        : s298
+Scan length    : 23
+Expected stream: 01101000001011001101000
+Observed stream: 01101000001011001101000
+SCAN SHIFT PASS
+========================================
+build/s298/s298_scan_shift_tb.sv:144: $finish called at 286000 (1ps)

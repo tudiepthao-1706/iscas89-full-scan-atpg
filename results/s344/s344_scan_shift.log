@@ -1,0 +1,9 @@
+VCD info: dumpfile results/s344/s344_scan_shift.vcd opened for output.
+========================================
+Circuit        : s344
+Scan length    : 35
+Expected stream: 01000001011001101000001011001101000
+Observed stream: 01000001011001101000001011001101000
+SCAN SHIFT PASS
+========================================
+build/s344/s344_scan_shift_tb.sv:172: $finish called at 430000 (1ps)
