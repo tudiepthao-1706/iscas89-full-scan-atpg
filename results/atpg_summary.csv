@@ -1,0 +1,4 @@
+circuit,fault_sites,total_stuck_at_faults,detected_faults,undetected_faults,coverage_percent,tool_reported_coverage_percent,compacted_patterns
+s27,45,90,78,12,86.66667,86.66666,6
+s298,244,488,484,4,99.18033,99.18033,11
+s344,346,692,684,8,98.84393,98.84393,12

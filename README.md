@@ -397,8 +397,6 @@ the original generated netlists unchanged.
 
 ## Planned Extensions
 
-- Generate a transparent ATPG summary with total, detected, and undetected
-  fault counts.
 - Compare pre-scan and post-scan cell count and mapped-area estimates.
 - Add simulation-based functional-mode regression between pre-scan and
   post-scan netlists.
