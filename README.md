@@ -442,7 +442,24 @@ iverilog -V
 python3 --version
 ```
 
-## Running the Core Pipeline
+## Running the Regression Suite
+
+The stable verification and analysis regressions can be executed with:
+
+```bash
+bash scripts/run_regressions.sh
+```
+
+The runner performs:
+
+- true shift-capture-shift verification for `s27`;
+- serial scan-integrity verification for `s298` and `s344`;
+- functional-mode pre-scan versus post-scan regression for `s27`;
+- mapped cell-area analysis for all three circuits;
+- ATPG summary generation when ATPG execution logs are available.
+
+The runner exits with a non-zero status when a required compile, simulation,
+verification marker, or area-analysis step fails.
 
 ```bash
 mkdir -p build/logs
